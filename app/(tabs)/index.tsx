@@ -1,98 +1,220 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons'; // Untuk ikon settings
+import { Image } from 'expo-image'; // Gunakan expo-image untuk performa
+import { Link } from 'expo-router'; // [BARU] Impor Link untuk navigasi
+import React from 'react';
+import {
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+// -------------------------------------------------------------------
+// [BARU] KOMPONEN KARTU INFO YANG BISA DIPAKAI ULANG
+// -------------------------------------------------------------------
+type InfoCardProps = {
+  title: string;
+  metric: string;
+  subtext: string;
+  imageUri: string;
+};
 
+const InfoCard = ({ title, metric, subtext, imageUri }: InfoCardProps) => (
+  <View style={styles.card}>
+    {/* Bagian Teks (Kiri) */}
+    <View>
+      <Text style={styles.cardTitle}>{title}</Text>
+      <Text style={styles.cardMetric}>{metric}</Text>
+      <Text style={styles.cardSubtext}>{subtext}</Text>
+    </View>
+    {/* Bagian Gambar (Kanan) */}
+    <Image source={{ uri: imageUri }} style={styles.cardImage} />
+  </View>
+);
+
+// -------------------------------------------------------------------
+// [BARU] KOMPONEN UTAMA HOMESCREEN (DASHBOARD)
+// -------------------------------------------------------------------
 export default function HomeScreen() {
+  const cardsData = [
+    {
+      title: 'Nutrition',
+      metric: '2,100 cal',
+      subtext: 'Remaining',
+      imageUri: 'https://i.imgur.com/e1VdKoY.png', // Gambar brokoli
+    },
+    {
+      title: 'Sleep',
+      metric: '7h 30m',
+      subtext: 'Last night',
+      imageUri: 'https://i.imgur.com/xX83gBv.png', // Gambar tidur
+    },
+    {
+      title: 'Activity',
+      metric: '5,200 steps',
+      subtext: 'Today',
+      imageUri: 'https://i.imgur.com/mYvjSjG.png', // Gambar lari
+    },
+    {
+      title: 'Activity',
+      metric: '5,200 steps',
+      subtext: 'Today',
+      imageUri: 'https://i.imgur.com/mYvjSjG.png', // Gambar lari (duplikat)
+    },
+    {
+      title: 'Activity',
+      metric: '5,200 steps',
+      subtext: 'Today',
+      imageUri: 'https://i.imgur.com/mYvjSjG.png', // Gambar lari (duplikat)
+    },
+  ];
+  
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <SafeAreaView style={styles.container}>
+      {/* --- 1. HEADER --- */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Dashboard</Text>
+        <TouchableOpacity>
+          <Ionicons name="settings-outline" size={24} color="white" />
+        </TouchableOpacity>
+      </View>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+      {/* --- 2. KONTEN SCROLLABLE --- */}
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        
+        {/* --- 3. KARTU PROFIL --- */}
+        <View style={styles.profileCard}>
+          <Image
+            source={{ uri: 'https://i.imgur.com/S5vPSsN.png' }} // Placeholder avatar
+            style={styles.avatar}
+          />
+          <View style={styles.profileInfo}>
+            <Text style={styles.profileName}>Olivia Bennett</Text>
+            <Text style={styles.profileDetails}>28, Female</Text>
+            <Text style={styles.profileDetails}>San Francisco, CA</Text>
+          </View>
+        </View>
+
+        {/* --- 4. DAFTAR KARTU INFO --- */}
+        {cardsData.map((card, index) => (
+          <InfoCard
+            key={index} 
+            title={card.title}
+            metric={card.metric}
+            subtext={card.subtext}
+            imageUri={card.imageUri}
+          />
+        ))}
+
+        {/* --- 5. [BARU] TOMBOL TES NAVIGASI KE SIGN IN --- */}
+        <Link 
+          href="/signin" // Href tetap di Link
+          asChild // Beri tahu Link untuk meneruskan properti ke anak
+        >
+          <TouchableOpacity>
+            {/* Style dan Teks sekarang ada di dalam <Text> */}
+            <Text style={styles.testLink}> 
+              (Tes) Kembali ke Sign In
+            </Text>
+          </TouchableOpacity>
+        </Link>
+        {/* --- AKHIR TOMBOL TES --- */}
+        {/* --- AKHIR TOMBOL TES --- */}
+
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
+// -------------------------------------------------------------------
+// [BARU] STYLESHEET
+// -------------------------------------------------------------------
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    flex: 1,
+    backgroundColor: '#121212', 
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+  },
+  headerTitle: {
+    color: 'white',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  scrollContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 20, 
+  },
+  profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    marginBottom: 30, 
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40, 
+    borderWidth: 2,
+    borderColor: '#333',
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  profileInfo: {
+    marginLeft: 15,
+  },
+  profileName: {
+    color: 'white',
+    fontSize: 22,
+    fontWeight: 'bold',
+  },
+  profileDetails: {
+    color: '#B0B0B0', 
+    fontSize: 14,
+    marginTop: 2,
+  },
+  card: {
+    backgroundColor: '#1E1E1E', 
+    borderRadius: 15,
+    padding: 15,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15, 
+  },
+  cardTitle: {
+    color: '#B0B0B0',
+    fontSize: 14,
+  },
+  cardMetric: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginVertical: 4,
+  },
+  cardSubtext: {
+    color: '#B0B0B0',
+    fontSize: 12,
+  },
+  cardImage: {
+    width: 100,
+    height: 60,
+    borderRadius: 10,
+    backgroundColor: '#333', 
+  },
+  // [BARU] Style untuk tombol tes
+  testLink: {
+    fontSize: 18, 
+    color: '#007AFF', // Warna link biru
+    paddingVertical: 40, // Beri jarak banyak
+    textAlign: 'center',
+    fontWeight: 'bold' 
   },
 });
