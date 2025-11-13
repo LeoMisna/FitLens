@@ -1,124 +1,132 @@
-import { Ionicons } from '@expo/vector-icons'; // [DIUBAH]
+// Di file: app/(tabs)/_layout.tsx
+
+import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { View } from 'react-native'; // [BARU]
+import { Text, View } from 'react-native';
 
-// [DIHAPUS] Kita tidak memakai komponen kustom dari template
-// import { HapticTab } from '@/components/haptic-tab';
-// import { IconSymbol } from '@/components/ui/icon-symbol';
-// import { Colors } from '@/constants/theme';
-// import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useFonts } from 'expo-font';
 
 export default function TabLayout() {
-  // [DIHAPUS] Kita akan 'hardcode' tema gelap
-  // const colorScheme = useColorScheme();
+  
+  const [fontsLoaded, fontError] = useFonts({
+    'Ionicons': require('@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf'),
+  });
+
+  // --- [PERBAIKAN ESLINT] ---
+  // Kita beri nama pada fungsi yang dikembalikan
+  // untuk memenuhi aturan 'react/display-name'.
+  const renderIcon = (name: React.ComponentProps<typeof Ionicons>['name']) => {
+    
+    // Beri nama pada fungsi komponen ini
+    function TabBarIcon({ color }: { color: string }) {
+      if (fontError) {
+        return <Text style={{ color, fontSize: 24 }}>?</Text>;
+      }
+      if (!fontsLoaded) {
+        return null;
+      }
+      return <Ionicons name={name} size={24} color={color} />;
+    }
+    
+    // Kembalikan komponen yang sudah punya nama
+    return TabBarIcon;
+  };
+  // --- AKHIR PERBAIKAN ---
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        // [BARU] Styling untuk Tab Bar gelap
-        tabBarActiveTintColor: '#FFFFFF', // Ikon aktif (Putih)
-        tabBarInactiveTintColor: '#888888', // Ikon tidak aktif (Abu-abu)
+        tabBarActiveTintColor: '#FFFFFF',
+        tabBarInactiveTintColor: '#888888',
         tabBarStyle: {
-          backgroundColor: '#000000', // Latar belakang Tab Bar (Hitam)
-          borderTopWidth: 0, // Hapus garis di atas tab bar
+          backgroundColor: '#000000',
+          borderTopWidth: 0,
         },
         tabBarLabelStyle: {
-          fontSize: 10, // Perkecil font label
+          fontSize: 10,
         },
       }}>
       
-      {/* 1. Tab Dashboard (Home) */}
       <Tabs.Screen
-        name="index" // Menunjuk ke app/(tabs)/index.tsx
+        name="index"
         options={{
           title: 'Dashboard',
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="home" size={24} color={color} />
-          ),
+          tabBarIcon: renderIcon('home'),
         }}
       />
       
-      {/* 2. Tab Nutrition (BARU) */}
       <Tabs.Screen
-        name="nutrition" // Menunjuk ke app/(tabs)/nutrition.tsx
+        name="nutrition"
         options={{
           title: 'Nutrition',
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="nutrition" size={24} color={color} />
-          ),
+          tabBarIcon: renderIcon('nutrition'),
         }}
       />
       
-      {/* 3. Tab Sleep (BARU) */}
       <Tabs.Screen
-        name="sleep" // Menunjuk ke app/(tabs)/sleep.tsx
+        name="sleep"
         options={{
           title: 'Sleep',
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="moon" size={24} color={color} />
-          ),
+          tabBarIcon: renderIcon('moon'),
         }}
       />
       
-      {/* 4. Tombol Tengah (Kustom) */}
       <Tabs.Screen
-        name="scan" // Anda perlu buat file 'scan.tsx'
+        name="scan"
         options={{
-          title: '', // Tanpa teks
-          tabBarIcon: ({ focused }) => (
-            <View
-              style={{
-                width: 60,
-                height: 60,
-                borderRadius: 30,
-                backgroundColor: '#FFF', // Latar belakang putih
-                justifyContent: 'center',
-                alignItems: 'center',
-                bottom: 20, // Mengangkat tombol ke atas
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.25,
-                shadowRadius: 3.84,
-                elevation: 5,
-              }}>
-              <Ionicons name="camera" size={30} color="#000" /> {/* Ikon hitam */}
-            </View>
-          ),
+          title: '',
+          // --- [PERBAIKAN ESLINT] ---
+          // Kita beri nama pada fungsi 'tabBarIcon' ini juga
+          tabBarIcon: function ScanTabBarIcon({ focused }) {
+            if (fontError) return <Text>?</Text>;
+            if (!fontsLoaded) return null;
+            
+            return (
+              <View
+                style={{
+                  width: 60,
+                  height: 60,
+                  borderRadius: 30,
+                  backgroundColor: '#FFF',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  bottom: 20, 
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.25,
+                  shadowRadius: 3.84,
+                  elevation: 5,
+                }}>
+                <Ionicons name="camera" size={30} color="#000" />
+              </View>
+            );
+          },
         }}
       />
 
-      {/* 5. Tab Device (BARU) */}
       <Tabs.Screen
-        name="device" // Menunjuk ke app/(tabs)/device.tsx
+        name="device"
         options={{
           title: 'Device',
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="phone-portrait" size={24} color={color} />
-          ),
+          tabBarIcon: renderIcon('phone-portrait'),
         }}
       />
       
-      {/* 6. Tab Consultation (BARU) */}
       <Tabs.Screen
-        name="consultation" // Menunjuk ke app/(tabs)/consultation.tsx
+        name="consultation"
         options={{
           title: 'Consultation',
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="chatbubble-ellipses" size={24} color={color} />
-          ),
+          tabBarIcon: renderIcon('chatbubble-ellipses'),
         }}
       />
       
-      {/* 7. Tab Community (BARU) */}
       <Tabs.Screen
-        name="community" // Menunjuk ke app/(tabs)/community.tsx
+        name="community"
         options={{
           title: 'Community',
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="people" size={24} color={color} />
-          ),
+          tabBarIcon: renderIcon('people'),
         }}
       />
 
