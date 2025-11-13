@@ -1,19 +1,18 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAuth } from 'firebase/auth';
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+// Di file: firebaseConfig.ts
 
-// Your web app's Firebase configuration
+import { initializeApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+
+// Baca variabel dari .env
 const firebaseConfig = {
-  apiKey: "AIzaSyClOhHIYB4BhYZCu_2XKErdeqrF645XMrc",
-  authDomain: "fitlens-b7a6b.firebaseapp.com",
-  projectId: "fitlens-b7a6b",
-  storageBucket: "fitlens-b7a6b.firebasestorage.app",
-  messagingSenderId: "1078521285362",
-  appId: "1:1078521285362:web:c30ead3e5e5839d1349e6b"
+  apiKey: process.env.EXPO_PUBLIC_API_KEY,
+  authDomain: process.env.EXPO_PUBLIC_AUTH_DOMAIN,
+  projectId: process.env.EXPO_PUBLIC_PROJECT_ID,
+  storageBucket: process.env.EXPO_PUBLIC_STORAGE_BUCKET,
+  messagingSenderId: process.env.EXPO_PUBLIC_MESSAGING_SENDER_ID,
+  appId: process.env.EXPO_PUBLIC_APP_ID
 };
 
-// Initialize Firebase
+// Inisialisasi Firebase
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
