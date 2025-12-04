@@ -1,9 +1,29 @@
-import { Text, View } from 'react-native';
+// app/(tabs)/scan.tsx
+import { createStackNavigator } from "@react-navigation/stack";
+import React from "react";
+import CameraScreen from "../../src/screens/CameraScreen";
+import ResultScreen from "../../src/screens/ResultScreen";
+
+const Stack = createStackNavigator();
 
 export default function ScanScreen() {
   return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#121212' }}>
-      <Text style={{ color: 'white' }}>Halaman Scan/Camera</Text>
-    </View>
+    <Stack.Navigator
+      initialRouteName="CameraScreen"
+      screenOptions={{
+        headerShown: true, // Ini Header milik Stack (Food Scanner)
+      }}
+    >
+      <Stack.Screen
+        name="CameraScreen"
+        component={CameraScreen}
+        options={{ title: "Food Scanner" }}
+      />
+      <Stack.Screen
+        name="ResultScreen"
+        component={ResultScreen}
+        options={{ title: "Hasil Prediksi" }}
+      />
+    </Stack.Navigator>
   );
 }

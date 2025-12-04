@@ -1,9 +1,9 @@
 // Di dalam file: app/(tabs)/sleep.tsx
 
-import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
-import { useFocusEffect } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
+import { Link, useFocusEffect, useRouter } from "expo-router"; // [PERBAIKAN] Tambahkan Link
+import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -12,15 +12,26 @@ import {
   ScrollView,
   StatusBar,
   StyleSheet,
+  Switch,
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
+} from "react-native";
 
-import { collection, getDocs, limit, query, where } from 'firebase/firestore';
-import { auth, db } from '../../firebaseConfig';
+// [DIHAPUS] Import DateTimePicker sudah hilang
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  limit,
+  query,
+  updateDoc,
+  where,
+} from "firebase/firestore";
+import { auth, db } from "../../firebaseConfig";
 
-// --- Tipe Data (Tidak berubah) ---
+// --- Tipe Data ---
 type SleepData = {
   score: number;
   timeInBedInMinutes: number;
@@ -31,18 +42,23 @@ type SleepData = {
   remInMinutes: number;
 };
 
-// --- Helper: Format Waktu (Tidak berubah) ---
+type SleepSettings = {
+  bedtime: string;
+  wakeupTime: string;
+  isAlarmOn: boolean;
+  alarmTime: string;
+};
+
+// --- Helper: Format Menit ---
 const formatTimeFromMinutes = (totalMinutes: number) => {
   if (isNaN(totalMinutes) || totalMinutes < 0) return "0m";
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
-  if (hours > 0) {
-    return `${hours}h ${minutes}m`;
-  }
+  if (hours > 0) return `${hours}h ${minutes}m`;
   return `${minutes}m`;
 };
 
-// --- Komponen StatCard (Tidak berubah) ---
+// --- Komponen StatCard ---
 // @ts-ignore
 const StatCard = ({ title, value, style }) => (
   <View style={[styles.statCard, style]}>
@@ -51,15 +67,15 @@ const StatCard = ({ title, value, style }) => (
   </View>
 );
 
-// --- Komponen ProgressBar (Sudah diperbaiki) ---
+// --- Komponen ProgressBar ---
 // @ts-ignore
-const ProgressBar = ({ progress, style = {} }) => ( // [PERBAIKAN] 'style' dibuat opsional
+const ProgressBar = ({ progress, style = {} }) => (
   <View style={[styles.barBackground, style]}>
     <View style={[styles.barProgress, { width: `${progress}%` }]} />
   </View>
 );
 
-// --- Komponen StageBar (Tidak berubah) ---
+// --- Komponen StageBar ---
 // @ts-ignore
 const StageBar = ({ label, minutes, totalMinutes }) => {
   const percentage = totalMinutes > 0 ? (minutes / totalMinutes) * 100 : 0;
@@ -71,51 +87,137 @@ const StageBar = ({ label, minutes, totalMinutes }) => {
   );
 };
 
-// --- Komponen Utama Halaman Sleep ---
+// --- Setting Item (Kembali standar) ---
+// @ts-ignore
+const SettingItem = ({ icon, title, subtitle, value, onPress }) => (
+  <TouchableOpacity style={styles.settingItem} onPress={onPress}>
+    <View style={styles.settingIconContainer}>
+      <Ionicons name={icon} size={24} color="#FFF" />
+    </View>
+    <View style={styles.settingTextContainer}>
+      <Text style={styles.settingTitle}>{title}</Text>
+      <Text style={styles.settingSubtitle}>{subtitle}</Text>
+    </View>
+    {value && <Text style={styles.settingValue}>{value}</Text>}
+  </TouchableOpacity>
+);
+
+// --- Toggle Item ---
+// @ts-ignore
+const ToggleItem = ({ icon, title, subtitle, value, onToggle }) => (
+  <View style={styles.settingItem}>
+    <View style={styles.settingIconContainer}>
+      <Ionicons name={icon} size={24} color="#FFF" />
+    </View>
+    <View style={styles.settingTextContainer}>
+      <Text style={styles.settingTitle}>{title}</Text>
+      <Text style={styles.settingSubtitle}>{subtitle}</Text>
+    </View>
+    <Switch
+      trackColor={{ false: "#767577", true: "#81b0ff" }}
+      thumbColor={value ? "#FFF" : "#f4f3f4"}
+      onValueChange={onToggle}
+      value={value}
+    />
+  </View>
+);
+
+// --- Navigation Item ---
+// @ts-ignore
+const NavigationItem = ({ icon, title, onPress }) => (
+  <TouchableOpacity style={styles.settingItem} onPress={onPress}>
+    <View style={styles.settingIconContainer}>
+      <Ionicons name={icon} size={24} color="#FFF" />
+    </View>
+    <View style={styles.settingTextContainer}>
+      <Text style={styles.settingTitle}>{title}</Text>
+    </View>
+    <Ionicons name="chevron-forward" size={20} color="#888" />
+  </TouchableOpacity>
+);
+
+// ==================================================================
+// KOMPONEN UTAMA SCREEN
+// ==================================================================
 export default function SleepScreen() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [sleepData, setSleepData] = useState<SleepData | null>(null);
 
+  const [settings, setSettings] = useState<SleepSettings>({
+    bedtime: "22:00",
+    wakeupTime: "06:00",
+    isAlarmOn: true,
+    alarmTime: "06:00",
+  });
+
+  // [DIHAPUS] State dan fungsi Picker dihapus agar aman
+
   const fetchData = useCallback(async (uid: string) => {
     setLoading(true);
-    setSleepData(null); 
+    setSleepData(null);
     try {
-      
-      // --- [PERBAIKAN LOGIKA TANGGAL] ---
-      // Hapus: const today = new Date().toISOString().split('T')[0];
-      // Ganti dengan ini:
+      // 1. Data Harian
       const dateObj = new Date();
       const year = dateObj.getFullYear();
-      const month = String(dateObj.getMonth() + 1).padStart(2, '0'); // +1 karena bulan 0-indexed
-      const day = String(dateObj.getDate()).padStart(2, '0');
+      const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+      const day = String(dateObj.getDate()).padStart(2, "0");
       const todayString = `${year}-${month}-${day}`;
-      
-      // Sekarang 'todayString' akan menjadi "2025-11-14" (WIB)
-      // bukan "2025-11-13" (UTC)
-      // --- AKHIR PERBAIKAN ---
 
       const q = query(
-        collection(db, 'sleepEntries'),
-        where('userId', '==', uid),
-        where('date', '==', todayString), // Gunakan string tanggal yang benar
-        limit(1) 
+        collection(db, "sleepEntries"),
+        where("userId", "==", uid),
+        where("date", "==", todayString),
+        limit(1)
       );
-
       const querySnap = await getDocs(q);
-
-      if (querySnap.empty) {
-        console.log(`Tidak ada data tidur untuk: ${todayString}`); // Log untuk debug
-        setSleepData(null);
-      } else {
+      if (!querySnap.empty) {
         setSleepData(querySnap.docs[0].data() as SleepData);
       }
+
+      // 2. Data Settings
+      const userRef = doc(db, "users", uid);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        if (userData.sleepSettings) {
+          setSettings(userData.sleepSettings as SleepSettings);
+        }
+      }
     } catch (error) {
-      console.error("Error mengambil data tidur: ", error);
-      Alert.alert("Gagal Memuat", "Tidak bisa mengambil data tidur.");
+      console.error("Error fetching data: ", error);
     } finally {
       setLoading(false);
     }
   }, []);
+
+  // Fungsi Update Alarm ke Firebase
+  const toggleAlarm = async (value: boolean) => {
+    // Update UI Optimis
+    setSettings({ ...settings, isAlarmOn: value });
+
+    const user = auth.currentUser;
+    if (user) {
+      try {
+        const userRef = doc(db, "users", user.uid);
+        await updateDoc(userRef, {
+          "sleepSettings.isAlarmOn": value,
+        });
+      } catch (error) {
+        console.error("Gagal update alarm:", error);
+        Alert.alert("Error", "Gagal menyimpan pengaturan alarm.");
+        setSettings({ ...settings, isAlarmOn: !value }); // Rollback
+      }
+    }
+  };
+
+  // [BARU] Alert Sederhana saat diklik
+  const showInfo = () => {
+    Alert.alert(
+      "Info",
+      "Pengaturan waktu akan segera hadir di update berikutnya."
+    );
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -124,12 +226,10 @@ export default function SleepScreen() {
         fetchData(user.uid);
       } else {
         setLoading(false);
-        setSleepData(null);
       }
     }, [fetchData])
   );
 
-  // --- renderContent() (Tidak berubah) ---
   const renderContent = () => {
     if (loading) {
       return (
@@ -139,204 +239,288 @@ export default function SleepScreen() {
       );
     }
 
-    if (!sleepData) {
-      return (
-        <View style={styles.centeredContainer}>
-          <Text style={styles.emptyText}>No sleep data recorded for today.</Text>
-          <Text style={styles.emptySubtext}>
-            Sync your device or add an entry to see your analysis.
-          </Text>
-        </View>
-      );
-    }
-
-    const scoreText = sleepData.score > 80 ? 'Good' : 'Fair'; 
+    const hasData = !!sleepData;
+    const scoreText = hasData && sleepData!.score > 80 ? "Good" : "Fair";
 
     return (
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <Image
-          source={{ uri: 'https://i.imgur.com/xX83gBv.png' }} 
-          style={styles.bannerImage}
-        />
-        <Text style={styles.sectionTitle}>Sleep Score</Text>
-        <View style={styles.scoreRow}>
-          <Text style={styles.scoreText}>{scoreText}</Text>
-          <Text style={styles.scoreNumber}>{sleepData.score}</Text>
+        {hasData ? (
+          <>
+            <Image
+              source={{
+                uri: "https://images.unsplash.com/photo-1531306728370-e2ebd9d7bb99?q=80&w=600",
+              }}
+              style={styles.bannerImage}
+            />
+            <Text style={styles.sectionTitle}>Sleep Score</Text>
+            <View style={styles.scoreRow}>
+              <Text style={styles.scoreText}>{scoreText}</Text>
+              <Text style={styles.scoreNumber}>{sleepData!.score}</Text>
+            </View>
+            <ProgressBar progress={sleepData!.score} />
+            <Text style={styles.sectionTitle}>Sleep Analysis</Text>
+            <View style={styles.statRow}>
+              <StatCard
+                title="Total Sleep"
+                value={formatTimeFromMinutes(sleepData!.totalSleepInMinutes)}
+                style={{ flex: 1, marginRight: 10 }}
+              />
+              <StatCard
+                title="Time in Bed"
+                value={formatTimeFromMinutes(sleepData!.timeInBedInMinutes)}
+                style={{ flex: 1, marginLeft: 10 }}
+              />
+            </View>
+            <StatCard
+              title="Awake Time"
+              value={formatTimeFromMinutes(sleepData!.awakeInMinutes)}
+              style={{ width: "100%", marginTop: 20 }}
+            />
+            <Text style={styles.sectionTitle}>Sleep Stages</Text>
+            <View style={styles.stageContainer}>
+              <StageBar
+                label="Deep"
+                minutes={sleepData!.deepInMinutes}
+                totalMinutes={sleepData!.totalSleepInMinutes}
+              />
+              <StageBar
+                label="Light"
+                minutes={sleepData!.lightInMinutes}
+                totalMinutes={sleepData!.totalSleepInMinutes}
+              />
+              <StageBar
+                label="REM"
+                minutes={sleepData!.remInMinutes}
+                totalMinutes={sleepData!.totalSleepInMinutes}
+              />
+              <StageBar
+                label="Awake"
+                minutes={sleepData!.awakeInMinutes}
+                totalMinutes={sleepData!.timeInBedInMinutes}
+              />
+            </View>
+          </>
+        ) : (
+          <View style={styles.noDataContainer}>
+            <Text style={styles.emptyText}>No sleep data for today.</Text>
+            <Text style={styles.emptySubtext}>
+              Sync device to see analysis.
+            </Text>
+          </View>
+        )}
+
+        <View style={styles.divider} />
+        <Text style={styles.sectionTitle}>Recommendations</Text>
+        <Text style={styles.recommendationText}>
+          To improve your sleep, try to maintain a consistent sleep schedule.
+        </Text>
+
+        <Text style={styles.sectionTitle}>Sleep Schedule</Text>
+
+        <View style={styles.scheduleBarContainer}>
+          <Text style={styles.scheduleTimeLabel}>{settings.bedtime}</Text>
+          <View style={styles.scheduleTrack}>
+            <View style={styles.scheduleFill} />
+          </View>
+          <Text style={styles.scheduleTimeLabel}>{settings.wakeupTime}</Text>
         </View>
-        <ProgressBar progress={sleepData.score} />
-        <Text style={styles.sectionTitle}>Sleep Analysis</Text>
-        <View style={styles.statRow}>
-          <StatCard
-            title="Total Sleep"
-            value={formatTimeFromMinutes(sleepData.totalSleepInMinutes)}
-            style={{ flex: 1, marginRight: 10 }}
+        <View style={styles.scheduleTimeLabelsRow}>
+          <Text style={styles.smallLabel}>Bedtime</Text>
+          <Text style={styles.smallLabel}>Wake Up</Text>
+        </View>
+
+        {/* --- PENGATURAN KEMBALI SEDERHANA (Tanpa Picker) --- */}
+        <View style={styles.settingsContainer}>
+          <SettingItem
+            icon="moon"
+            title="Bedtime"
+            subtitle={settings.bedtime}
+            value=""
+            onPress={showInfo} // Tampilkan alert info saja
           />
-          <StatCard
-            title="Time in Bed"
-            value={formatTimeFromMinutes(sleepData.timeInBedInMinutes)}
-            style={{ flex: 1, marginLeft: 10 }}
+          <SettingItem
+            icon="sunny"
+            title="Wake Up"
+            subtitle={settings.wakeupTime}
+            value=""
+            onPress={showInfo}
+          />
+
+          <ToggleItem
+            icon="alarm"
+            title="Alarm"
+            subtitle={settings.alarmTime}
+            value={settings.isAlarmOn}
+            onToggle={toggleAlarm}
           />
         </View>
-        <StatCard
-          title="Awake Time"
-          value={formatTimeFromMinutes(sleepData.awakeInMinutes)}
-          style={{ width: '100%', marginTop: 20 }}
-        />
-        <Text style={styles.sectionTitle}>Sleep Stages</Text>
-        <View style={styles.stageContainer}>
-          <StageBar
-            label="Deep"
-            minutes={sleepData.deepInMinutes}
-            totalMinutes={sleepData.totalSleepInMinutes}
+
+        <Text style={styles.sectionTitle}>Sleep Manager</Text>
+        <View style={styles.settingsContainer}>
+          <NavigationItem
+            icon="timer-outline"
+            title="Set Sleep Goal"
+            onPress={showInfo}
           />
-          <StageBar
-            label="Light"
-            minutes={sleepData.lightInMinutes}
-            totalMinutes={sleepData.totalSleepInMinutes}
-          />
-          <StageBar
-            label="REM"
-            minutes={sleepData.remInMinutes}
-            totalMinutes={sleepData.totalSleepInMinutes}
-          />
-          <StageBar
-            label="Awake"
-            minutes={sleepData.awakeInMinutes}
-            totalMinutes={sleepData.timeInBedInMinutes} 
+          <NavigationItem
+            icon="musical-notes-outline"
+            title="Relaxation Music"
+            onPress={() => router.push("/relaxation")}
           />
         </View>
+
+        <View style={{ height: 40 }} />
       </ScrollView>
     );
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* --- HEADER (Tidak berubah) --- */}
+      {/* --- HEADER (Rata Kiri) --- */}
       <View style={styles.header}>
-        <TouchableOpacity style={{ opacity: 0 }}> 
-          <Ionicons name="arrow-back" size={28} color="white" />
-        </TouchableOpacity>
+        {/* Hapus tombol back palsu dan spacer */}
+
+        {/* Judul langsung di kiri */}
         <Text style={styles.headerTitle}>Sleep</Text>
-        <View style={{ width: 28 }} />
+
+        {/* Tombol Tambah di kanan */}
+        {/* Pastikan href sesuai nama file Anda: /addSleep atau /newSleep */}
+        <Link href="/newSleep" asChild>
+          <TouchableOpacity>
+            <Ionicons name="add" size={32} color="white" />
+          </TouchableOpacity>
+        </Link>
       </View>
+
       {renderContent()}
+
+      {/* Komponen Picker sudah dihapus */}
     </SafeAreaView>
   );
 }
 
-// --- StyleSheet (Tidak berubah) ---
+// --- StyleSheet (Sama) ---
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    backgroundColor: "#121212",
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 15,
   },
   headerTitle: {
-    color: 'white',
-    fontSize: 22,
-    fontWeight: 'bold',
+    color: "white",
+    fontSize: 28,
+    fontWeight: "bold",
   },
   centeredContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
-  emptyText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
+  noDataContainer: {
+    backgroundColor: "#1E1E1E",
+    borderRadius: 15,
+    padding: 30,
+    alignItems: "center",
+    marginBottom: 20,
   },
-  emptySubtext: {
-    color: '#B0B0B0',
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: 10,
-  },
-  scrollContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
+  emptyText: { color: "white", fontSize: 18, fontWeight: "bold" },
+  emptySubtext: { color: "#B0B0B0", fontSize: 14, marginTop: 5 },
+  scrollContainer: { paddingHorizontal: 20, paddingBottom: 20 },
   bannerImage: {
-    width: '100%',
+    width: "100%",
     height: 180,
     borderRadius: 15,
     marginBottom: 20,
   },
   sectionTitle: {
-    color: 'white',
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginTop: 10,
+    color: "white",
+    fontSize: 20,
+    fontWeight: "bold",
+    marginTop: 25,
     marginBottom: 15,
   },
   scoreRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
     marginBottom: 10,
   },
-  scoreText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  scoreNumber: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
+  scoreText: { color: "white", fontSize: 18, fontWeight: "600" },
+  scoreNumber: { color: "white", fontSize: 18, fontWeight: "bold" },
   barBackground: {
     height: 8,
-    backgroundColor: '#333',
+    backgroundColor: "#333",
     borderRadius: 4,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
-  barProgress: {
-    height: 8,
-    backgroundColor: '#FFFFFF',
+  barProgress: { height: 8, backgroundColor: "#FFFFFF", borderRadius: 4 },
+  statRow: { flexDirection: "row", justifyContent: "space-between" },
+  statCard: { backgroundColor: "#1E1E1E", borderRadius: 15, padding: 20 },
+  statTitle: { color: "#B0B0B0", fontSize: 14, marginBottom: 8 },
+  statValue: { color: "white", fontSize: 24, fontWeight: "bold" },
+  stageContainer: { backgroundColor: "#1E1E1E", borderRadius: 15, padding: 20 },
+  stageRow: { flexDirection: "row", alignItems: "center", marginBottom: 15 },
+  stageLabel: { color: "white", fontSize: 16, width: 60 },
+  divider: { height: 1, backgroundColor: "#333", marginVertical: 10 },
+  recommendationText: { color: "#B0B0B0", fontSize: 14, lineHeight: 22 },
+  scheduleBarContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#2C3E50",
+    borderRadius: 10,
+    height: 40,
+    paddingHorizontal: 15,
+    justifyContent: "space-between",
+  },
+  scheduleTrack: {
+    flex: 1,
+    height: "100%",
+    marginHorizontal: 10,
+    justifyContent: "center",
+  },
+  scheduleFill: {
+    height: 20,
+    backgroundColor: "#66CDAA",
     borderRadius: 4,
+    width: "70%",
+    alignSelf: "center",
   },
-  statRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  scheduleTimeLabel: { color: "white", fontWeight: "bold", fontSize: 14 },
+  scheduleTimeLabelsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    marginTop: 5,
   },
-  statCard: {
-    backgroundColor: '#1E1E1E',
-    borderRadius: 15,
-    padding: 20,
+  smallLabel: { color: "#555", fontSize: 12 },
+  settingsContainer: { marginTop: 10 },
+  settingItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#1E1E1E",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 10,
   },
-  statTitle: {
-    color: '#B0B0B0',
-    fontSize: 14,
-    marginBottom: 8,
+  settingIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#333",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 15,
   },
-  statValue: {
-    color: 'white',
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  stageContainer: {
-    backgroundColor: '#1E1E1E',
-    borderRadius: 15,
-    padding: 20,
-  },
-  stageRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  stageLabel: {
-    color: 'white',
-    fontSize: 16,
-    width: 60,
-  },
+  settingTextContainer: { flex: 1 },
+  settingTitle: { color: "white", fontSize: 16, fontWeight: "600" },
+  settingSubtitle: { color: "#B0B0B0", fontSize: 12, marginTop: 2 },
+  settingValue: { color: "white", fontSize: 16, fontWeight: "bold" },
 });

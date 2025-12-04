@@ -1,18 +1,23 @@
-// Di dalam file: app/_layout.tsx
+// Di file: app/_layout.tsx
+import "react-native-gesture-handler";
+// ... import lainnya di bawah ini
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import {
+  DarkTheme,
+  DefaultTheme,
+  ThemeProvider,
+} from "@react-navigation/native";
+import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import "react-native-reanimated";
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
-
-import { useFonts } from 'expo-font';
-import * as SplashScreen from 'expo-splash-screen';
-import React, { useEffect } from 'react';
-import { Text } from 'react-native';
+import { useFonts } from "expo-font";
+import * as SplashScreen from "expo-splash-screen";
+import React, { useEffect } from "react";
+import { Text } from "react-native";
 
 export const unstable_settings = {
-  anchor: '(tabs)',
+  anchor: "(tabs)",
 };
 
 SplashScreen.preventAutoHideAsync();
@@ -21,7 +26,7 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   const [fontsLoaded, fontError] = useFonts({
-    'Ionicons': require('@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf'),
+    Ionicons: require("@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf"),
   });
 
   useEffect(() => {
@@ -31,10 +36,7 @@ export default function RootLayout() {
   }, [fontsLoaded, fontError]);
 
   if (fontError) {
-    console.error("FATAL: Font gagal dimuat", fontError);
-    return <Text style={{ flex: 1, color: 'red', textAlign: 'center', marginTop: 100 }}>
-      Gagal memuat font ikon. Coba restart aplikasi.
-    </Text>;
+    return <Text>Error Font</Text>;
   }
 
   if (!fontsLoaded) {
@@ -42,21 +44,31 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <> 
+    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+      <>
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="signin" options={{ headerShown: false }} />
           <Stack.Screen name="signup" options={{ headerShown: false }} />
-          
-          {/* --- [INI BAGIAN PENTING] --- */}
-          {/* Pastikan baris ini ada dan namanya "addMeal" */}
-          <Stack.Screen 
-            name="addMeal" 
-            options={{ presentation: 'modal', headerShown: false }} 
+          <Stack.Screen name="settings" options={{ headerShown: false }} />
+
+          {/* Halaman Modal untuk Tambah Makanan */}
+          <Stack.Screen
+            name="addMeal"
+            options={{ presentation: "modal", headerShown: false }}
           />
-          {/* --------------------------- */}
-          
+
+          {/* Halaman Modal untuk Tambah Tidur */}
+          <Stack.Screen
+            name="newSleep"
+            options={{ presentation: "modal", headerShown: false }}
+          />
+
+          {/* [PENTING] Halaman Musik harus didaftarkan di sini */}
+          <Stack.Screen
+            name="relaxation"
+            options={{ headerShown: false, presentation: "card" }}
+          />
         </Stack>
         <StatusBar style="auto" />
       </>
